@@ -1,0 +1,126 @@
+import os
+import sqlite3
+from datetime import datetime
+from flask import Flask, request, redirect, url_for, render_template, g, send_from_directory
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Umisteni databaze lze prepsat prostredim: export DITE_DB=/cesta/k/db.sqlite
+DB_PATH = os.environ.get("DITE_DB", os.path.expanduser("~/dite.db"))
+
+app = Flask(__name__)
+
+
+def get_db():
+    db = getattr(g, "_db", None)
+    if db is None:
+        db = g._db = sqlite3.connect(DB_PATH)
+        db.row_factory = sqlite3.Row
+    return db
+
+
+@app.teardown_appcontext
+def close_db(exc):
+    db = getattr(g, "_db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS kojeni (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cas TEXT NOT NULL,
+            mnozstvi INTEGER NOT NULL,
+            stolice INTEGER NOT NULL DEFAULT 0,
+            moc INTEGER NOT NULL DEFAULT 0,
+            zvraceni INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def posledni_mnozstvi():
+    row = get_db().execute(
+        "SELECT mnozstvi FROM kojeni ORDER BY datetime(cas) DESC LIMIT 1"
+    ).fetchone()
+    return row["mnozstvi"] if row else 0
+
+
+@app.route("/", methods=["GET", "POST"])
+def formular():
+    ulozeno = False
+    chyba = None
+    if request.method == "POST":
+        mnozstvi = request.form.get("mnozstvi", "0") or "0"
+        stolice = 1 if request.form.get("stolice") else 0
+        moc = 1 if request.form.get("moc") else 0
+        zvraceni = 1 if request.form.get("zvraceni") else 0
+        cas_raw = request.form.get("cas", "").strip()
+
+        # Validace casu - ocekavame format YYYY-MM-DDTHH:MM (z datetime-local)
+        cas = None
+        if cas_raw:
+            try:
+                dt = datetime.strptime(cas_raw, "%Y-%m-%dT%H:%M")
+                cas = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                chyba = "Neplatný formát času."
+        else:
+            cas = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if chyba is None:
+            try:
+                mnozstvi_int = int(mnozstvi)
+                if mnozstvi_int < 0:
+                    chyba = "Množství nemůže být záporné."
+            except ValueError:
+                chyba = "Množství musí být číslo."
+
+        if chyba is None:
+            db = get_db()
+            db.execute(
+                "INSERT INTO kojeni (cas, mnozstvi, stolice, moc, zvraceni) VALUES (?, ?, ?, ?, ?)",
+                (cas, mnozstvi_int, stolice, moc, zvraceni),
+            )
+            db.commit()
+            ulozeno = True
+    aktualni_cas = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    return render_template(
+        "formular.html",
+        predvyplneno=posledni_mnozstvi(),
+        aktualni_cas=aktualni_cas,
+        ulozeno=ulozeno,
+        chyba=chyba,
+    )
+
+
+@app.route("/prehled")
+def prehled():
+    zaznamy = get_db().execute(
+        "SELECT * FROM kojeni ORDER BY datetime(cas) DESC"
+    ).fetchall()
+    return render_template("prehled.html", zaznamy=zaznamy)
+
+
+@app.route("/smazat/<int:zaznam_id>", methods=["POST"])
+def smazat(zaznam_id):
+    db = get_db()
+    db.execute("DELETE FROM kojeni WHERE id = ?", (zaznam_id,))
+    db.commit()
+    return redirect(url_for("prehled"))
+
+
+@app.route("/favicon.png")
+def favicon():
+    return send_from_directory(os.path.join(BASE_DIR, "static"), "favicon.png", mimetype="image/png")
+
+
+if __name__ == "__main__":
+    init_db()
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ url_for('favicon') }}">
+    <title>Přehled kojení</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 16px; background: #f5f5f5; color: #222;
+        }
+        .container { max-width: 480px; margin: 0 auto; }
+        h1 { font-size: 1.4rem; text-align: center; margin: 8px 0 20px; }
+        .zaznam {
+            background: #fff; border-radius: 8px; padding: 12px 14px;
+            margin: 8px 0; border-left: 4px solid #2563eb;
+        }
+        .cas { font-weight: 700; color: #2563eb; }
+        .mnozstvi { font-size: 1.1rem; margin: 4px 0; }
+        .flagy { font-size: 0.85rem; color: #666; }
+        .flagy span { margin-right: 8px; }
+        .flagy .ano { color: #dc2626; font-weight: 600; }
+        .prazdno { text-align: center; color: #888; margin-top: 40px; }
+        .odkaz { display: block; text-align: center; margin-top: 16px; color: #2563eb; text-decoration: none; }
+        .zaznam-row { display: flex; justify-content: space-between; align-items: center; }
+        .zaznam-info { flex: 1; }
+        form.smazat { margin: 0; }
+        form.smazat button {
+            background: #dc2626; color: #fff; border: none; border-radius: 6px;
+            padding: 8px 14px; font-size: 0.9rem; cursor: pointer; white-space: nowrap;
+        }
+        form.smazat button:active { background: #b91c1c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Přehled</h1>
+        {% if not zaznamy %}
+            <p class="prazdno">Zatím žádné záznamy.</p>
+        {% else %}
+            {% for z in zaznamy %}
+            <div class="zaznam">
+                <div class="zaznam-row">
+                    <div class="zaznam-info">
+                        <div class="cas">{{ z.cas }}</div>
+                        <div class="mnozstvi">{{ z.mnozstvi }} ml</div>
+                        <div class="flagy">
+                            {% if z.stolice %}<span class="ano">● stolice</span>{% endif %}
+                            {% if z.moc %}<span class="ano">● moč</span>{% endif %}
+                            {% if z.zvraceni %}<span class="ano">● zvracení</span>{% endif %}
+                            {% if not z.stolice and not z.moc and not z.zvraceni %}
+                                <span>—</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form class="smazat" method="POST" action="{{ url_for('smazat', zaznam_id=z.id) }}" onsubmit="return confirm('Smazat záznam?')">
+                        <button type="submit">Smazat</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+        <a class="odkaz" href="{{ url_for('formular') }}">← Nový záznam</a>
+    </div>
+</body>
+</html>

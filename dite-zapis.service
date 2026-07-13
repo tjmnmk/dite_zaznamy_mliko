@@ -1,0 +1,19 @@
+[Unit]
+Description=Dite Zapis - Flask app (gunicorn)
+After=network.target
+
+[Service]
+Type=exec
+User=dite
+WorkingDirectory=/home/adam/dite_zapis
+ExecStart=/usr/bin/gunicorn \
+    --bind 0.0.0.0:5000 \
+    --workers 8 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
