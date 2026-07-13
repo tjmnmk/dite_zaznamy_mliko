@@ -4,6 +4,8 @@ Jednoduchá Flask aplikace pro záznam kojení (množství mléka, stolice, moč
 
 Kterou nejspíš nikdo kromě mne nikdy nevyužije.
 
+AI SLOP.
+
 ## Spuštění
 
 ```bash
