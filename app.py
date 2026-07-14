@@ -1,7 +1,11 @@
 import os
+import io
 import sqlite3
 from datetime import datetime
-from flask import Flask, request, redirect, url_for, render_template, g, send_from_directory
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from flask import Flask, request, redirect, url_for, render_template, g, send_from_directory, Response
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -119,6 +123,43 @@ def smazat(zaznam_id):
 @app.route("/favicon.png")
 def favicon():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "favicon.png", mimetype="image/png")
+
+
+@app.route("/graf")
+def graf():
+    zaznamy = get_db().execute(
+        "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) ASC"
+    ).fetchall()
+    return render_template("graf.html", ma_data=len(zaznamy) > 0)
+
+
+@app.route("/graf.png")
+def graf_png():
+    zaznamy = get_db().execute(
+        "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) ASC"
+    ).fetchall()
+
+    fig, ax = plt.subplots(figsize=(8, 4), dpi=150)
+    if zaznamy:
+        casy = [datetime.strptime(r["cas"], "%Y-%m-%d %H:%M:%S") for r in zaznamy]
+        mnozstvi = [r["mnozstvi"] for r in zaznamy]
+        ax.plot(casy, mnozstvi, marker="o", linewidth=2, color="#2563eb")
+        ax.fill_between(casy, mnozstvi, alpha=0.15, color="#2563eb")
+        ax.set_ylabel("Množství (ml)")
+        ax.set_xlabel("Čas")
+        ax.set_title("Množství mléka v čase")
+        ax.grid(True, alpha=0.3)
+        fig.autofmt_xdate()
+    else:
+        ax.text(0.5, 0.5, "Žádné záznamy", ha="center", va="center", fontsize=16, color="#888")
+        ax.set_axis_off()
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+    return Response(buf, mimetype="image/png")
 
 
 if __name__ == "__main__":
