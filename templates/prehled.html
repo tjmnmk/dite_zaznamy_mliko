@@ -50,15 +50,15 @@
         <div class="souhrn">
             <div class="radek">
                 <span class="label">Poslední krmení:</span>
-                <span class="hodnota">{{ posledni_krmeni.cas }} ({{ posledni_krmeni.mnozstvi }} ml)</span>
+                <span class="hodnota">{{ krmeni_pred or "—" }} ({{ posledni_krmeni.mnozstvi }} ml)</span>
             </div>
             <div class="radek">
                 <span class="label">Poslední moč:</span>
-                <span class="hodnota">{{ posledni_moc.cas if posledni_moc else "—" }}</span>
+                <span class="hodnota">{{ moc_pred or "—" }}</span>
             </div>
             <div class="radek">
                 <span class="label">Poslední stolice:</span>
-                <span class="hodnota">{{ posledni_stolice.cas if posledni_stolice else "—" }}</span>
+                <span class="hodnota">{{ stolice_pred or "—" }}</span>
             </div>
         </div>
         {% endif %}

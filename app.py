@@ -1,7 +1,7 @@
 import os
 import io
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -52,6 +52,29 @@ def graf_cache_invalidate():
     if _redis is None:
         return
     _redis.delete(b"graf:casovy", b"graf:denni")
+
+
+def pred_jakou_dobou(cas_str):
+    """Vrati lidsky citelnou dobu od daneho casu, napr. 'před 2 h 15 min'."""
+    if not cas_str:
+        return None
+    try:
+        dt = datetime.strptime(cas_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    delta = datetime.now() - dt
+    if delta < timedelta(0):
+        delta = timedelta(0)
+    dnu = delta.days
+    hodin = delta.seconds // 3600
+    minut = (delta.seconds % 3600) // 60
+    if dnu > 0:
+        return f"před {dnu} d {hodin} h"
+    if hodin > 0:
+        return f"před {hodin} h {minut} min"
+    if minut > 0:
+        return f"před {minut} min"
+    return "právě teď"
 
 
 def get_db():
@@ -165,6 +188,9 @@ def prehled():
         posledni_krmeni=posledni_krmeni,
         posledni_moc=posledni_moc,
         posledni_stolice=posledni_stolice,
+        krmeni_pred=pred_jakou_dobou(posledni_krmeni["cas"] if posledni_krmeni else None),
+        moc_pred=pred_jakou_dobou(posledni_moc["cas"] if posledni_moc else None),
+        stolice_pred=pred_jakou_dobou(posledni_stolice["cas"] if posledni_stolice else None),
     )
 
 
