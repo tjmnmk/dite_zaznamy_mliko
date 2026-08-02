@@ -1,5 +1,6 @@
 import os
 import io
+import csv
 import sqlite3
 import threading
 from datetime import datetime, timedelta
@@ -233,6 +234,24 @@ def smazat(zaznam_id):
 @app.route("/favicon.png")
 def favicon():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "favicon.png", mimetype="image/png")
+
+
+@app.route("/export.csv")
+def export_csv():
+    zaznamy = get_db().execute(
+        "SELECT cas, mnozstvi, stolice, moc, zvraceni FROM kojeni ORDER BY datetime(cas) ASC"
+    ).fetchall()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["čas", "množství (ml)", "stolice", "moč", "zvracení"])
+    for r in zaznamy:
+        writer.writerow([r["cas"], r["mnozstvi"], r["stolice"], r["moc"], r["zvraceni"]])
+    csv_data = buf.getvalue()
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=kojeni_export.csv"},
+    )
 
 
 @app.route("/deni-prehled")
