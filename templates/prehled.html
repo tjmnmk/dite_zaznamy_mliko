@@ -24,6 +24,13 @@
         .flagy span { margin-right: 8px; }
         .flagy .ano { color: #dc2626; font-weight: 600; }
         .prazdno { text-align: center; color: #888; margin-top: 40px; }
+        .souhrn {
+            background: #fff; border-radius: 8px; padding: 12px 14px;
+            margin: 8px 0 16px; border-left: 4px solid #16a34a;
+        }
+        .souhrn .radek { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.95rem; }
+        .souhrn .radek .label { color: #666; }
+        .souhrn .radek .hodnota { font-weight: 600; color: #222; }
         .odkaz { display: block; text-align: center; margin-top: 16px; color: #2563eb; text-decoration: none; }
         .zaznam-row { display: flex; justify-content: space-between; align-items: center; }
         .zaznam-info { flex: 1; }
@@ -39,6 +46,22 @@
     <a class="domu" href="{{ url_for('formular') }}" title="Domů">🏠</a>
     <div class="container">
         <h1>📋 Přehled</h1>
+        {% if zaznamy %}
+        <div class="souhrn">
+            <div class="radek">
+                <span class="label">Poslední krmení:</span>
+                <span class="hodnota">{{ posledni_krmeni.cas }} ({{ posledni_krmeni.mnozstvi }} ml)</span>
+            </div>
+            <div class="radek">
+                <span class="label">Poslední moč:</span>
+                <span class="hodnota">{{ posledni_moc.cas if posledni_moc else "—" }}</span>
+            </div>
+            <div class="radek">
+                <span class="label">Poslední stolice:</span>
+                <span class="hodnota">{{ posledni_stolice.cas if posledni_stolice else "—" }}</span>
+            </div>
+        </div>
+        {% endif %}
         {% if not zaznamy %}
             <p class="prazdno">Zatím žádné záznamy.</p>
         {% else %}

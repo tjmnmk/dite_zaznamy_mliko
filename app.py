@@ -146,10 +146,26 @@ def formular():
 
 @app.route("/prehled")
 def prehled():
-    zaznamy = get_db().execute(
+    db = get_db()
+    zaznamy = db.execute(
         "SELECT * FROM kojeni ORDER BY datetime(cas) DESC"
     ).fetchall()
-    return render_template("prehled.html", zaznamy=zaznamy)
+    posledni_krmeni = db.execute(
+        "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) DESC LIMIT 1"
+    ).fetchone()
+    posledni_moc = db.execute(
+        "SELECT cas FROM kojeni WHERE moc = 1 ORDER BY datetime(cas) DESC LIMIT 1"
+    ).fetchone()
+    posledni_stolice = db.execute(
+        "SELECT cas FROM kojeni WHERE stolice = 1 ORDER BY datetime(cas) DESC LIMIT 1"
+    ).fetchone()
+    return render_template(
+        "prehled.html",
+        zaznamy=zaznamy,
+        posledni_krmeni=posledni_krmeni,
+        posledni_moc=posledni_moc,
+        posledni_stolice=posledni_stolice,
+    )
 
 
 @app.route("/smazat/<int:zaznam_id>", methods=["POST"])
