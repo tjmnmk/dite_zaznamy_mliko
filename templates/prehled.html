@@ -81,6 +81,7 @@
                         </div>
                     </div>
                     <form class="smazat" method="POST" action="{{ url_for('smazat', zaznam_id=z.id) }}" onsubmit="return confirm('Smazat záznam?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit">Smazat</button>
                     </form>
                 </div>
