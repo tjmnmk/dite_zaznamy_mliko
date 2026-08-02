@@ -23,13 +23,19 @@ REDIS_URL = os.environ.get("DITE_REDIS", "redis://localhost:6379/0")
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-# Tajny klic pro session/CSRF - lze prepsat prostredim: export DITE_SECRET_KEY=...
-app.secret_key = os.environ.get("DITE_SECRET_KEY") or os.urandom(32)
-
 # CSRF ochrana formulare (Flask-WTF)
 csrf = CSRFProtect(app)
 
 _redis = redis.from_url(REDIS_URL, decode_responses=False)
+
+# Tajny klic pro session/CSRF sdileny vsem workery pres Redis.
+# Lze prepsat prostredim: export DITE_SECRET_KEY=...
+if os.environ.get("DITE_SECRET_KEY"):
+    app.secret_key = os.environ["DITE_SECRET_KEY"]
+else:
+    # Atomicka inicializace: SETNX vlozi klic jen pokud jeste neexisti, pak GET nacte platnou hodnotu
+    _redis.setnx(b"dite:secret_key", os.urandom(32))
+    app.secret_key = _redis.get(b"dite:secret_key")
 
 
 GRAF_CACHE_TTL = 900  # 15 minut
