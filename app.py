@@ -127,6 +127,16 @@ def favicon():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "favicon.png", mimetype="image/png")
 
 
+@app.route("/deni-prehled")
+def deni_prehled():
+    radky = get_db().execute(
+        "SELECT substr(cas, 1, 10) AS den, COUNT(*) AS pocet, SUM(mnozstvi) AS celkem "
+        "FROM kojeni GROUP BY substr(cas, 1, 10) ORDER BY den DESC"
+    ).fetchall()
+    dny = [{"den": r["den"], "pocet": r["pocet"], "celkem": r["celkem"]} for r in radky]
+    return render_template("deni_prehled.html", dny=dny)
+
+
 @app.route("/graf")
 def graf():
     zaznamy = get_db().execute(
@@ -156,6 +166,38 @@ def graf_png():
         ax.text(0.5, 0.5, "Žádné záznamy", ha="center", va="center", fontsize=16, color="#888")
         ax.set_axis_off()
     fig.tight_layout()
+
+@app.route("/graf-denni.png")
+def graf_denni_png():
+    radky = get_db().execute(
+        "SELECT substr(cas, 1, 10) AS den, COUNT(*) AS pocet, SUM(mnozstvi) AS celkem "
+        "FROM kojeni GROUP BY substr(cas, 1, 10) ORDER BY den ASC"
+    ).fetchall()
+
+    fig, ax1 = plt.subplots(figsize=(8, 4), dpi=150)
+    if radky:
+        dny = [r["den"] for r in radky]
+        pocet = [r["pocet"] for r in radky]
+        celkem = [r["celkem"] for r in radky]
+
+        x = range(len(dny))
+        ax1.bar(x, celkem, color="#2563eb", alpha=0.85, label="Mléko (ml)")
+        ax1.set_ylabel("Mléko (ml)", color="#2563eb")
+        ax1.tick_params(axis="y", labelcolor="#2563eb")
+        ax1.set_xticks(list(x))
+        ax1.set_xticklabels(dny, rotation=45, ha="right")
+        ax1.grid(True, alpha=0.3, axis="y")
+
+        ax2 = ax1.twinx()
+        ax2.plot(x, pocet, marker="o", linewidth=2, color="#dc2626", label="Počet kojení")
+        ax2.set_ylabel("Počet kojení", color="#dc2626")
+        ax2.tick_params(axis="y", labelcolor="#dc2626")
+
+        ax1.set_title("Denní spotřeba mléka a počet kojení")
+        fig.tight_layout()
+    else:
+        ax1.text(0.5, 0.5, "Žádné záznamy", ha="center", va="center", fontsize=16, color="#888")
+        ax1.set_axis_off()
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png")
