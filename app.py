@@ -8,13 +8,50 @@ import matplotlib.pyplot as plt
 from flask import Flask, request, redirect, url_for, render_template, g, send_from_directory, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+try:
+    import redis
+except ImportError:
+    redis = None
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Umisteni databaze lze prepsat prostredim: export DITE_DB=/cesta/k/db.sqlite
 DB_PATH = os.environ.get("DITE_DB", os.path.expanduser("~/dite.db"))
 
+# Umisteni Redisu lze prepsat prostredim: export DITE_REDIS=redis://localhost:6379/0
+REDIS_URL = os.environ.get("DITE_REDIS", "redis://localhost:6379/0")
+
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+_redis = None
+if redis is not None:
+    try:
+        _redis = redis.from_url(REDIS_URL, decode_responses=False)
+        _redis.ping()
+    except Exception:
+        _redis = None
+
+
+GRAF_CACHE_TTL = 900  # 15 minut
+
+
+def graf_cache_get(klic):
+    if _redis is None:
+        return None
+    return _redis.get(klic)
+
+
+def graf_cache_set(klic, data):
+    if _redis is None:
+        return
+    _redis.setex(klic, GRAF_CACHE_TTL, data)
+
+
+def graf_cache_invalidate():
+    if _redis is None:
+        return
+    _redis.delete(b"graf:casovy", b"graf:denni")
 
 
 def get_db():
@@ -95,6 +132,7 @@ def formular():
                 (cas, mnozstvi_int, stolice, moc, zvraceni),
             )
             db.commit()
+            graf_cache_invalidate()
             ulozeno = True
     aktualni_cas = datetime.now().strftime("%Y-%m-%dT%H:%M")
     return render_template(
@@ -119,6 +157,7 @@ def smazat(zaznam_id):
     db = get_db()
     db.execute("DELETE FROM kojeni WHERE id = ?", (zaznam_id,))
     db.commit()
+    graf_cache_invalidate()
     return redirect(url_for("prehled"))
 
 
@@ -147,6 +186,10 @@ def graf():
 
 @app.route("/graf.png")
 def graf_png():
+    cached = graf_cache_get(b"graf:casovy")
+    if cached is not None:
+        return Response(cached, mimetype="image/png")
+
     zaznamy = get_db().execute(
         "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) ASC"
     ).fetchall()
@@ -167,8 +210,20 @@ def graf_png():
         ax.set_axis_off()
     fig.tight_layout()
 
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    png = buf.getvalue()
+    graf_cache_set(b"graf:casovy", png)
+    return Response(png, mimetype="image/png")
+
+
 @app.route("/graf-denni.png")
 def graf_denni_png():
+    cached = graf_cache_get(b"graf:denni")
+    if cached is not None:
+        return Response(cached, mimetype="image/png")
+
     radky = get_db().execute(
         "SELECT substr(cas, 1, 10) AS den, COUNT(*) AS pocet, SUM(mnozstvi) AS celkem "
         "FROM kojeni GROUP BY substr(cas, 1, 10) ORDER BY den ASC"
@@ -202,8 +257,9 @@ def graf_denni_png():
     buf = io.BytesIO()
     fig.savefig(buf, format="png")
     plt.close(fig)
-    buf.seek(0)
-    return Response(buf, mimetype="image/png")
+    png = buf.getvalue()
+    graf_cache_set(b"graf:denni", png)
+    return Response(png, mimetype="image/png")
 
 
 if __name__ == "__main__":
