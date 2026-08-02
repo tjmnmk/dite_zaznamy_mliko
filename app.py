@@ -9,10 +9,7 @@ from flask import Flask, request, redirect, url_for, render_template, g, send_fr
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf.csrf import CSRFProtect
 
-try:
-    import redis
-except ImportError:
-    redis = None
+import redis
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -31,13 +28,7 @@ app.secret_key = os.environ.get("DITE_SECRET_KEY") or os.urandom(32)
 # CSRF ochrana formulare (Flask-WTF)
 csrf = CSRFProtect(app)
 
-_redis = None
-if redis is not None:
-    try:
-        _redis = redis.from_url(REDIS_URL, decode_responses=False)
-        _redis.ping()
-    except Exception:
-        _redis = None
+_redis = redis.from_url(REDIS_URL, decode_responses=False)
 
 
 GRAF_CACHE_TTL = 900  # 15 minut
