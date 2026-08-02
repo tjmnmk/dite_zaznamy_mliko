@@ -1,6 +1,7 @@
 import os
 import io
 import sqlite3
+import threading
 from datetime import datetime, timedelta
 import matplotlib
 matplotlib.use("Agg")
@@ -50,6 +51,28 @@ def graf_cache_invalidate():
     if _redis is None:
         return
     _redis.delete(b"graf:casovy", b"graf:denni")
+
+
+def _vygeneruj_grafy():
+    """Pregeneruje oba grafy do cache (volat v app kontextu)."""
+    try:
+        graf_png()
+    except Exception:
+        pass
+    try:
+        graf_denni_png()
+    except Exception:
+        pass
+
+
+def graf_cache_refresh_async():
+    """Smaže cache a na pozadí přegeneruje grafy, aby se na to nečekalo."""
+    graf_cache_invalidate()
+    t = threading.Thread(
+        target=lambda: app.app_context().push() or _vygeneruj_grafy(),
+        daemon=True,
+    )
+    t.start()
 
 
 def pred_jakou_dobou(cas_str):
@@ -153,7 +176,7 @@ def formular():
                 (cas, mnozstvi_int, stolice, moc, zvraceni),
             )
             db.commit()
-            graf_cache_invalidate()
+            graf_cache_refresh_async()
             ulozeno = True
     aktualni_cas = datetime.now().strftime("%Y-%m-%dT%H:%M")
     return render_template(
@@ -197,7 +220,7 @@ def smazat(zaznam_id):
     db = get_db()
     db.execute("DELETE FROM kojeni WHERE id = ?", (zaznam_id,))
     db.commit()
-    graf_cache_invalidate()
+    graf_cache_refresh_async()
     return redirect(url_for("prehled"))
 
 
