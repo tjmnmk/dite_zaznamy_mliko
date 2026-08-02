@@ -62,6 +62,7 @@
         <div class="chyba">⚠ {{ chyba }}</div>
         {% endif %}
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="cas">Čas</label>
             <input type="datetime-local" id="cas" name="cas" value="{{ aktualni_cas }}">
 

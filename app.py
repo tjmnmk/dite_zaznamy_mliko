@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from flask import Flask, request, redirect, url_for, render_template, g, send_from_directory, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_wtf.csrf import CSRFProtect
 
 try:
     import redis
@@ -23,6 +24,12 @@ REDIS_URL = os.environ.get("DITE_REDIS", "redis://localhost:6379/0")
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Tajny klic pro session/CSRF - lze prepsat prostredim: export DITE_SECRET_KEY=...
+app.secret_key = os.environ.get("DITE_SECRET_KEY") or os.urandom(32)
+
+# CSRF ochrana formulare (Flask-WTF)
+csrf = CSRFProtect(app)
 
 _redis = None
 if redis is not None:
