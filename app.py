@@ -39,9 +39,6 @@ else:
     app.secret_key = _redis.get(b"dite:secret_key")
 
 
-GRAF_CACHE_TTL = 900  # 15 minut
-
-
 def graf_cache_get(klic):
     if _redis is None:
         return None
@@ -51,7 +48,7 @@ def graf_cache_get(klic):
 def graf_cache_set(klic, data):
     if _redis is None:
         return
-    _redis.setex(klic, GRAF_CACHE_TTL, data)
+    _redis.set(klic, data)
 
 
 def graf_cache_invalidate():
@@ -131,7 +128,8 @@ def init_db():
             mnozstvi INTEGER NOT NULL,
             stolice INTEGER NOT NULL DEFAULT 0,
             moc INTEGER NOT NULL DEFAULT 0,
-            zvraceni INTEGER NOT NULL DEFAULT 0
+            zvraceni INTEGER NOT NULL DEFAULT 0,
+            pozice_hlavy INTEGER
         )
         """
     )
@@ -156,6 +154,7 @@ def formular():
         moc = 1 if request.form.get("moc") else 0
         zvraceni = 1 if request.form.get("zvraceni") else 0
         cas_raw = request.form.get("cas", "").strip()
+        pozice_hlavy_raw = request.form.get("pozice_hlavy", "") or ""
 
         # Validace casu - ocekavame format YYYY-MM-DDTHH:MM (z datetime-local)
         cas = None
@@ -176,11 +175,20 @@ def formular():
             except ValueError:
                 chyba = "Množství musí být číslo."
 
+        pozice_hlavy = None
+        if chyba is None and pozice_hlavy_raw:
+            try:
+                pozice_hlavy = int(pozice_hlavy_raw)
+                if not 0 <= pozice_hlavy <= 100:
+                    chyba = "Pozice hlavy musí být 0-100."
+            except ValueError:
+                chyba = "Pozice hlavy musí být číslo."
+
         if chyba is None:
             db = get_db()
             db.execute(
-                "INSERT INTO kojeni (cas, mnozstvi, stolice, moc, zvraceni) VALUES (?, ?, ?, ?, ?)",
-                (cas, mnozstvi_int, stolice, moc, zvraceni),
+                "INSERT INTO kojeni (cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy) VALUES (?, ?, ?, ?, ?, ?)",
+                (cas, mnozstvi_int, stolice, moc, zvraceni, pozice_hlavy),
             )
             db.commit()
             graf_cache_refresh_async()
@@ -239,13 +247,13 @@ def favicon():
 @app.route("/export.csv")
 def export_csv():
     zaznamy = get_db().execute(
-        "SELECT cas, mnozstvi, stolice, moc, zvraceni FROM kojeni ORDER BY datetime(cas) ASC"
+        "SELECT cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy FROM kojeni ORDER BY datetime(cas) ASC"
     ).fetchall()
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["čas", "množství (ml)", "stolice", "moč", "zvracení"])
+    writer.writerow(["čas", "množství (ml)", "stolice", "moč", "zvracení", "pozice hlavy"])
     for r in zaznamy:
-        writer.writerow([r["cas"], r["mnozstvi"], r["stolice"], r["moc"], r["zvraceni"]])
+        writer.writerow([r["cas"], r["mnozstvi"], r["stolice"], r["moc"], r["zvraceni"], r["pozice_hlavy"]])
     csv_data = buf.getvalue()
     return Response(
         csv_data,

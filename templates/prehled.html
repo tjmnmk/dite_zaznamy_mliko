@@ -72,6 +72,7 @@
                         <div class="cas">{{ z.cas }}</div>
                         <div class="mnozstvi">{{ z.mnozstvi }} ml</div>
                         <div class="flagy">
+                            {% if z.pozice_hlavy is not none %}<span>🧠 hlava: {{ z.pozice_hlavy }}/100</span>{% else %}<span>🧠 hlava: —</span>{% endif %}
                             {% if z.stolice %}<span class="ano">● stolice</span>{% endif %}
                             {% if z.moc %}<span class="ano">● moč</span>{% endif %}
                             {% if z.zvraceni %}<span class="ano">● zvracení</span>{% endif %}
