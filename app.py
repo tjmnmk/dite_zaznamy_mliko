@@ -222,12 +222,16 @@ def prehled():
     posledni_stolice = db.execute(
         "SELECT cas FROM kojeni WHERE stolice = 1 ORDER BY datetime(cas) DESC LIMIT 1"
     ).fetchone()
+    posledni_hlava = db.execute(
+        "SELECT pozice_hlavy FROM kojeni WHERE pozice_hlavy IS NOT NULL ORDER BY datetime(cas) DESC LIMIT 1"
+    ).fetchone()
     return render_template(
         "prehled.html",
         zaznamy=zaznamy,
         posledni_krmeni=posledni_krmeni,
         posledni_moc=posledni_moc,
         posledni_stolice=posledni_stolice,
+        posledni_hlava=posledni_hlava["pozice_hlavy"] if posledni_hlava else None,
         krmeni_pred=pred_jakou_dobou(posledni_krmeni["cas"] if posledni_krmeni else None),
         moc_pred=pred_jakou_dobou(posledni_moc["cas"] if posledni_moc else None),
         stolice_pred=pred_jakou_dobou(posledni_stolice["cas"] if posledni_stolice else None),
@@ -294,7 +298,7 @@ def graf_png():
         return Response(cached, mimetype="image/png")
 
     zaznamy = get_db().execute(
-        "SELECT cas, mnozstvi, pozice_hlavy FROM kojeni ORDER BY datetime(cas) ASC"
+        "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) ASC"
     ).fetchall()
 
     fig, ax = plt.subplots(figsize=(8, 4), dpi=150)
@@ -303,14 +307,6 @@ def graf_png():
         mnozstvi = [r["mnozstvi"] for r in zaznamy]
         ax.plot(casy, mnozstvi, marker="o", linewidth=2, color="#2563eb")
         ax.fill_between(casy, mnozstvi, alpha=0.15, color="#2563eb")
-
-        # Barevne body podle pozice hlavy (cervena = leva, modra = prava)
-        for r in zaznamy:
-            if r["pozice_hlavy"] is not None:
-                barva = "#dc2626" if r["pozice_hlavy"] <= 5 else "#1d4ed8"
-                ax.plot(datetime.strptime(r["cas"], "%Y-%m-%d %H:%M:%S"), r["mnozstvi"],
-                        marker="o", markersize=10, color=barva, zorder=5)
-
         ax.set_ylabel("Množství (ml)")
         ax.set_xlabel("Čas")
         ax.set_title("Množství mléka v čase")
