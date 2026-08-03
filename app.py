@@ -54,17 +54,21 @@ def graf_cache_set(klic, data):
 def graf_cache_invalidate():
     if _redis is None:
         return
-    _redis.delete(b"graf:casovy", b"graf:denni")
+    _redis.delete(b"graf:casovy", b"graf:denni", b"graf:hlava")
 
 
 def _vygeneruj_grafy():
-    """Pregeneruje oba grafy do cache (volat v app kontextu)."""
+    """Pregeneruje vechny grafy do cache (volat v app kontextu)."""
     try:
         graf_png()
     except Exception:
         pass
     try:
         graf_denni_png()
+    except Exception:
+        pass
+    try:
+        graf_hlava_png()
     except Exception:
         pass
 
@@ -179,8 +183,8 @@ def formular():
         if chyba is None and pozice_hlavy_raw:
             try:
                 pozice_hlavy = int(pozice_hlavy_raw)
-                if not 0 <= pozice_hlavy <= 100:
-                    chyba = "Pozice hlavy musí být 0-100."
+                if not 0 <= pozice_hlavy <= 10:
+                    chyba = "Pozice hlavy musí být 0-10."
             except ValueError:
                 chyba = "Pozice hlavy musí být číslo."
 
@@ -265,10 +269,13 @@ def export_csv():
 @app.route("/deni-prehled")
 def deni_prehled():
     radky = get_db().execute(
-        "SELECT substr(cas, 1, 10) AS den, COUNT(*) AS pocet, SUM(mnozstvi) AS celkem "
+        "SELECT substr(cas, 1, 10) AS den, COUNT(*) AS pocet, SUM(mnozstvi) AS celkem, "
+        "AVG(pozice_hlavy) AS prumer_hlavy "
         "FROM kojeni GROUP BY substr(cas, 1, 10) ORDER BY den DESC"
     ).fetchall()
-    dny = [{"den": r["den"], "pocet": r["pocet"], "celkem": r["celkem"]} for r in radky]
+    dny = [{"den": r["den"], "pocet": r["pocet"], "celkem": r["celkem"],
+            "prumer_hlavy": round(r["prumer_hlavy"]) if r["prumer_hlavy"] is not None else None}
+            for r in radky]
     return render_template("deni_prehled.html", dny=dny)
 
 
@@ -355,6 +362,42 @@ def graf_denni_png():
     plt.close(fig)
     png = buf.getvalue()
     graf_cache_set(b"graf:denni", png)
+    return Response(png, mimetype="image/png")
+
+
+@app.route("/graf-hlava.png")
+def graf_hlava_png():
+    cached = graf_cache_get(b"graf:hlava")
+    if cached is not None:
+        return Response(cached, mimetype="image/png")
+
+    zaznamy = get_db().execute(
+        "SELECT cas, pozice_hlavy FROM kojeni WHERE pozice_hlavy IS NOT NULL ORDER BY datetime(cas) ASC"
+    ).fetchall()
+
+    fig, ax = plt.subplots(figsize=(8, 4), dpi=150)
+    if zaznamy:
+        casy = [datetime.strptime(r["cas"], "%Y-%m-%d %H:%M:%S") for r in zaznamy]
+        hlavy = [r["pozice_hlavy"] for r in zaznamy]
+        ax.plot(casy, hlavy, marker="o", linewidth=2, color="#16a34a")
+        ax.fill_between(casy, hlavy, alpha=0.15, color="#16a34a")
+        ax.set_ylabel("Pozice hlavy (0-10)")
+        ax.set_xlabel("Čas")
+        ax.set_title("Pozice hlavy v čase (z pohledu rodiče)")
+        ax.set_ylim(-0.5, 10.5)
+        ax.set_yticks(range(0, 11))
+        ax.grid(True, alpha=0.3)
+        fig.autofmt_xdate()
+    else:
+        ax.text(0.5, 0.5, "Žádné záznamy", ha="center", va="center", fontsize=16, color="#888")
+        ax.set_axis_off()
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    png = buf.getvalue()
+    graf_cache_set(b"graf:hlava", png)
     return Response(png, mimetype="image/png")
 
 

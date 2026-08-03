@@ -26,6 +26,7 @@
         {% if ma_data %}
         <img class="graf" src="{{ url_for('graf_png') }}" alt="Graf množství mléka v čase">
         <img class="graf" src="{{ url_for('graf_denni_png') }}" alt="Denní spotřeba mléka a počet kojení" style="margin-top:12px">
+        <img class="graf" src="{{ url_for('graf_hlava_png') }}" alt="Pozice hlavy v čase" style="margin-top:12px">
         {% else %}
         <p class="prazdno">Zatím žádné záznamy.</p>
         {% endif %}

@@ -40,6 +40,7 @@
                         <th>Den</th>
                         <th class="cislo">Kojení</th>
                         <th class="cislo">Mléko (ml)</th>
+                        <th class="cislo">Hlava ⌀</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,6 +49,7 @@
                         <td class="den">{{ d.den }}</td>
                         <td class="cislo">{{ d.pocet }}×</td>
                         <td class="cislo">{{ d.celkem }}</td>
+                        <td class="cislo">{% if d.prumer_hlavy is not none %}{{ d.prumer_hlavy }}/10{% else %}—{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

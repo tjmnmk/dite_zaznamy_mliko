@@ -74,18 +74,18 @@
             <input type="number" id="mnozstvi" name="mnozstvi" min="0" value="{{ predvyplneno }}" required>
 
             <div class="hlava-slider">
-                <label for="pozice_hlavy">Pozice hlavy</label>
-                <input type="range" id="pozice_hlavy" name="pozice_hlavy" min="0" max="100" value="50">
-                <div class="stupnice"><span>L (0)</span><span id="hlava_hodnota">50</span><span>P (100)</span></div>
+                <label for="pozice_hlavy">Pozice hlavy <span style="font-weight:normal; font-size:0.8rem; color:#666;">(z pohledu rodiče)</span></label>
+                <input type="range" id="pozice_hlavy" name="pozice_hlavy" min="0" max="10" value="5">
+                <div class="stupnice"><span>← levá (0)</span><span id="hlava_hodnota">5</span><span>pravá (10) →</span></div>
+                <label style="font-weight:normal; font-size:0.85rem; display:flex; align-items:center; gap:8px; margin-top:8px;">
+                    <input type="checkbox" id="hlava_neznama" onchange="
+                        const s = document.getElementById('pozice_hlavy');
+                        const h = document.getElementById('hlava_hodnota');
+                        if (this.checked) { s.disabled = true; h.textContent = '—'; }
+                        else { s.disabled = false; h.textContent = s.value; }
+                    "> pozice hlavy nezaznamenána
+                </label>
             </div>
-            <label style="font-weight:normal; font-size:0.85rem; display:flex; align-items:center; gap:8px; margin-top:4px;">
-                <input type="checkbox" id="hlava_neznama" onchange="
-                    const s = document.getElementById('pozice_hlavy');
-                    const h = document.getElementById('hlava_hodnota');
-                    if (this.checked) { s.disabled = true; h.textContent = '—'; }
-                    else { s.disabled = false; h.textContent = s.value; }
-                "> nezaznamenáno
-            </label>
 
             <div class="checkboxy">
                 <label><input type="checkbox" name="stolice"> Stolice</label>
