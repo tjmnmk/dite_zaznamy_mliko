@@ -294,7 +294,7 @@ def graf_png():
         return Response(cached, mimetype="image/png")
 
     zaznamy = get_db().execute(
-        "SELECT cas, mnozstvi FROM kojeni ORDER BY datetime(cas) ASC"
+        "SELECT cas, mnozstvi, pozice_hlavy FROM kojeni ORDER BY datetime(cas) ASC"
     ).fetchall()
 
     fig, ax = plt.subplots(figsize=(8, 4), dpi=150)
@@ -303,6 +303,14 @@ def graf_png():
         mnozstvi = [r["mnozstvi"] for r in zaznamy]
         ax.plot(casy, mnozstvi, marker="o", linewidth=2, color="#2563eb")
         ax.fill_between(casy, mnozstvi, alpha=0.15, color="#2563eb")
+
+        # Barevne body podle pozice hlavy (cervena = leva, modra = prava)
+        for r in zaznamy:
+            if r["pozice_hlavy"] is not None:
+                barva = "#dc2626" if r["pozice_hlavy"] <= 5 else "#1d4ed8"
+                ax.plot(datetime.strptime(r["cas"], "%Y-%m-%d %H:%M:%S"), r["mnozstvi"],
+                        marker="o", markersize=10, color=barva, zorder=5)
+
         ax.set_ylabel("Množství (ml)")
         ax.set_xlabel("Čas")
         ax.set_title("Množství mléka v čase")
@@ -381,11 +389,12 @@ def graf_hlava_png():
         hlavy = [r["pozice_hlavy"] for r in zaznamy]
         ax.plot(casy, hlavy, marker="o", linewidth=2, color="#16a34a")
         ax.fill_between(casy, hlavy, alpha=0.15, color="#16a34a")
-        ax.set_ylabel("Pozice hlavy (0-10)")
+        ax.set_ylabel("Pozice hlavy")
         ax.set_xlabel("Čas")
         ax.set_title("Pozice hlavy v čase (z pohledu rodiče)")
         ax.set_ylim(-0.5, 10.5)
         ax.set_yticks(range(0, 11))
+        ax.set_yticklabels(["levá", "", "", "", "", "", "", "", "", "", "pravá"])
         ax.grid(True, alpha=0.3)
         fig.autofmt_xdate()
     else:
