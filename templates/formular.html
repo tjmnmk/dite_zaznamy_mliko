@@ -93,6 +93,9 @@
                 <label><input type="checkbox" name="zvraceni"> Zvracení</label>
             </div>
 
+            <label for="poznamka">Poznámka</label>
+            <textarea id="poznamka" name="poznamka" rows="2" style="width:100%; padding:14px; font-size:1rem; border:2px solid #ccc; border-radius:8px; resize:vertical;"></textarea>
+
             <button type="submit">Uložit</button>
         </form>
         <a class="odkaz" href="{{ url_for('prehled') }}">→ Přehled záznamů</a>

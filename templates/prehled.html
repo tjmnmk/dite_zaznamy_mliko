@@ -93,6 +93,7 @@
                                 <span>—</span>
                             {% endif %}
                         </div>
+                        {% if z.poznamka %}<div style="font-size:0.85rem; color:#555; margin-top:4px; white-space:pre-wrap;">📝 {{ z.poznamka }}</div>{% endif %}
                     </div>
                     <form class="smazat" method="POST" action="{{ url_for('smazat', zaznam_id=z.id) }}" onsubmit="return confirm('Smazat záznam?')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

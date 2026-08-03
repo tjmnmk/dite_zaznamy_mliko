@@ -133,7 +133,8 @@ def init_db():
             stolice INTEGER NOT NULL DEFAULT 0,
             moc INTEGER NOT NULL DEFAULT 0,
             zvraceni INTEGER NOT NULL DEFAULT 0,
-            pozice_hlavy INTEGER
+            pozice_hlavy INTEGER,
+            poznamka TEXT
         )
         """
     )
@@ -159,6 +160,7 @@ def formular():
         zvraceni = 1 if request.form.get("zvraceni") else 0
         cas_raw = request.form.get("cas", "").strip()
         pozice_hlavy_raw = request.form.get("pozice_hlavy", "") or ""
+        poznamka = request.form.get("poznamka", "").strip()
 
         # Validace casu - ocekavame format YYYY-MM-DDTHH:MM (z datetime-local)
         cas = None
@@ -191,8 +193,8 @@ def formular():
         if chyba is None:
             db = get_db()
             db.execute(
-                "INSERT INTO kojeni (cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy) VALUES (?, ?, ?, ?, ?, ?)",
-                (cas, mnozstvi_int, stolice, moc, zvraceni, pozice_hlavy),
+                "INSERT INTO kojeni (cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy, poznamka) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cas, mnozstvi_int, stolice, moc, zvraceni, pozice_hlavy, poznamka or None),
             )
             db.commit()
             graf_cache_refresh_async()
@@ -255,13 +257,13 @@ def favicon():
 @app.route("/export.csv")
 def export_csv():
     zaznamy = get_db().execute(
-        "SELECT cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy FROM kojeni ORDER BY datetime(cas) ASC"
+        "SELECT cas, mnozstvi, stolice, moc, zvraceni, pozice_hlavy, poznamka FROM kojeni ORDER BY datetime(cas) ASC"
     ).fetchall()
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["čas", "množství (ml)", "stolice", "moč", "zvracení", "pozice hlavy"])
+    writer.writerow(["čas", "množství (ml)", "stolice", "moč", "zvracení", "pozice hlavy", "poznámka"])
     for r in zaznamy:
-        writer.writerow([r["cas"], r["mnozstvi"], r["stolice"], r["moc"], r["zvraceni"], r["pozice_hlavy"]])
+        writer.writerow([r["cas"], r["mnozstvi"], r["stolice"], r["moc"], r["zvraceni"], r["pozice_hlavy"], r["poznamka"]])
     csv_data = buf.getvalue()
     return Response(
         csv_data,
