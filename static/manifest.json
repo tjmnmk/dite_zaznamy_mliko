@@ -1,0 +1,23 @@
+{
+  "name": "Záznamy kojení",
+  "short_name": "Kojení",
+  "description": "Záznamy o kojení, množství mléka a pozici hlavy",
+  "start_url": "/",
+  "display": "minimal-ui",
+  "background_color": "#f5f5f5",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
